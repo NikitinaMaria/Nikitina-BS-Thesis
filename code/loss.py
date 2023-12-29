@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 
-def get_negative_mask(int: batch_size) -> torch.Tensor:
+def get_negative_mask(batch_size: int) -> torch.Tensor:
     """
     Шаблон для маски с нулями на главной диагонали и на двух
     параллельных ей
@@ -42,11 +42,10 @@ def replace_pos_diagonals(full_matrix, pos_m):
 
 
 class ContrastiveLossBase(nn.Module):
-    def __init__(self, temperature, cuda, drop_fn):
+    def __init__(self, temperature, cuda):
         super().__init__()
         self.temperature: float = temperature
         self.cuda: bool = cuda
-        self.drop_fn: bool = drop_fn
 
     def forward(self, out_1, out_2, target):
         batch_size = out_1.shape[0]
@@ -67,10 +66,6 @@ class ContrastiveLossBase(nn.Module):
 
         return pos, neg
 
-    def extra_repr(self):
-        return "Temperature: {}\nCuda: {}\nDrop FN".format(self.temperature, self.cuda, self.drop_fn)
-
-
 class ContrastiveLoss(ContrastiveLossBase):
     def forward(self, out_1, out_2, out_m, target):
         pos, neg = super().forward(out_1, out_2, target)
@@ -79,11 +74,10 @@ class ContrastiveLoss(ContrastiveLossBase):
         return loss
 
 class DebiasedPosLoss(nn.Module):
-    def __init__(self, temperature, cuda, drop_fn, tau_plus):
+    def __init__(self, temperature, cuda, tau_plus):
         super().__init__()
         self.temperature: float = temperature
         self.cuda: bool = cuda
-        self.drop_fn: bool = drop_fn
         self.tau_plus: float = tau_plus
 
     def forward(self, out_1, out_2, out_m, target):
@@ -115,28 +109,22 @@ class DebiasedPosLoss(nn.Module):
 
         # Вычисление лосс-функции
         tau_minus = 1 - self.tau_plus
-        g = neg.mean(dim=-1)  # (2bs,)
+        g = neg.mean(dim=-1)
         numerator = p_estimate - tau_minus * g
         denominator = p_estimate + (N * self.tau_plus - tau_minus) * g
         loss = (-torch.log(numerator / denominator)).mean()
 
         return loss
 
-    def extra_repr(self):
-        return "Temperature: {}\nCuda: {}\nDrop FN{}\nTau plus: {}".format(
-            self.temperature, self.cuda, self.drop_fn, self.tau_plus)
-
 def get_loss(
     name: str,
     temperature: float,
     cuda: bool,
     tau_plus: float,
-    drop_fn: bool,
-    alpha: typing.Optional[float],
 ) -> nn.Module:
 
     if name == "Contrastive":
-        return ContrastiveLoss(temperature, cuda, drop_fn)
+        return ContrastiveLoss(temperature, cuda)
     if name == "DebiasedPos":
-        return DebiasedPosLoss(temperature, cuda, drop_fn, tau_plus)
+        return DebiasedPosLoss(temperature, cuda, tau_plus)
     raise Exception("Неправильный лосс {}".format(name))
