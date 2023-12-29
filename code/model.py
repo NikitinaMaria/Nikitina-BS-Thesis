@@ -22,7 +22,7 @@ class Model(nn.Module):
                 self.f.append(module)
         # Энкодер
         self.f = nn.Sequential(*self.f)
-        # Проекции
+        # Проекции на дополнительное пространство
         self.g = nn.Sequential(
             nn.Linear(in_size, 512, bias=False),
             nn.BatchNorm1d(512),
