@@ -27,5 +27,5 @@ Abstract
 
 Software modules developed as part of the study
 ======================================================
-1. A python code with all implementation `here <https://github.com/intsystems/ProjectTemplate/tree/master/code>`_.
-2. A code with base experiment `here <https://github.comintsystems/ProjectTemplate/blob/master/code/base.ipynb>`_. Can use `colab <http://colab.research.google.com/github/intsystems/ProjectTemplate/blob/master/code/base.ipynb>`_.
+1. A python code with all implementation `here <https://github.com/intsystems/Nikitina-BS-Thesis/blob/master/code>`_.
+2. A code with base experiment `here <https://github.com/intsystems/Nikitina-BS-Thesis/blob/master/code/Base.ipynb>`_. Can use `colab <http://colab.research.google.com/github/intsystems/Nikitina-BS-Thesis/blob/master/code/Base.ipynb>`_.
