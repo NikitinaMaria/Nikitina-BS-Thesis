@@ -1,158 +1,225 @@
-\documentclass{article}
-\usepackage{arxiv}
+\documentclass[a4paper, 12pt]{article}
 
-\usepackage[utf8]{inputenc}
-\usepackage[english, russian]{babel}
-\usepackage[T1]{fontenc}
-\usepackage{url}
-\usepackage{booktabs}
-\usepackage{amsfonts}
-\usepackage{nicefrac}
-\usepackage{microtype}
-\usepackage{lipsum}
-\usepackage{graphicx}
-\usepackage{natbib}
-\usepackage{doi}
+\input{preamble.tex}
+\renewcommand{\abstractname}{Аннотация}
 
+\title{Анализ смещения распределений при использовании сравнительного подхода в обучении представлений данных}
 
-
-\title{A template for the \emph{arxiv} style}
-
-\author{ David S.~Hippocampus\thanks{Use footnote for providing further
-		information about author (webpage, alternative
-		address)---\emph{not} for acknowledging funding agencies.} \\
-	Department of Computer Science\\
-	Cranberry-Lemon University\\
-	Pittsburgh, PA 15213 \\
-	\texttt{hippo@cs.cranberry-lemon.edu} \\
-	%% examples of more authors
+\author{
+    Мария Никитина \\
+	\texttt{nikitina.mariia@phystech.edu} \\
 	\And
-	Elias D.~Striatum \\
-	Department of Electrical Engineering\\
-	Mount-Sheikh University\\
-	Santa Narimana, Levand \\
-	\texttt{stariate@ee.mount-sheikh.edu} \\
-	%% \AND
-	%% Coauthor \\
-	%% Affiliation \\
-	%% Address \\
-	%% \texttt{email} \\
-	%% \And
-	%% Coauthor \\
-	%% Affiliation \\
-	%% Address \\
-	%% \texttt{email} \\
-	%% \And
-	%% Coauthor \\
-	%% Affiliation \\
-	%% Address \\
-	%% \texttt{email} \\
+ 	Роман Исаченко \\
+	\texttt{roman.isachenko@phystech.edu}
 }
-\date{}
-
-\renewcommand{\shorttitle}{\textit{arXiv} Template}
-
-%%% Add PDF metadata to help others organize their library
-%%% Once the PDF is generated, you can check the metadata with
-%%% $ pdfinfo template.pdf
-\hypersetup{
-pdftitle={A template for the arxiv style},
-pdfsubject={q-bio.NC, q-bio.QM},
-pdfauthor={David S.~Hippocampus, Elias D.~Striatum},
-pdfkeywords={First keyword, Second keyword, More},
-}
+\date{\today}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-	\lipsum[1]
+В последнее время contrastive learning вновь приобрело популярность. Оно заключается в сравнении положительных (похожих) и отрицательных (непохожих) пар из выборки для получения представления без меток. Однако наличие ложноотрицательных и ложноположительных элементов приводит к смещению функции потерь. В данной работе анализируются различные способы устранения этих искажений. Основываясь на примере из области обучения с учителем, разрабатывется несмещённая модель contrastive learning, которая не требует разметки, исследуются её свойства. Качество несмещённого представления оценивается в задаче классификации на примере датасета CIFAR10. В работе демонстрируя применимость и надежность предлагаемого метода в случаях, когда полная разметка данных является дорогостоящей или неосуществимой.
 \end{abstract}
 
+\keywords{Contrastive learning \and Representation learning \and Self-supervised learning}
 
-\keywords{First keyword \and Second keyword \and More}
+\section{Введение}
 
-\section{Introduction}
-\lipsum[2]
-\lipsum[3]
+В последние годы все большую популярность приобретают методы обучения без учителя. Они хороши тем, что не требуют предварительной разметки данных, а, значит, для них можно быстрее и проще найти большие по объёму выборки для обучения.
 
-\section{Headings: first level}
-\label{sec:headings}
+\textit{Self-supervised learning} -- класс методов машинного обучения, позволяющих модели обучаться на задачах, которые не требуют явной разметки данных. Вместо этого используются некоторые характеристики выборки для создания своей собственной разметки.
 
-\lipsum[4] See Section \ref{sec:headings}.
+В частности, \textit{representation learning} -- это процесс отображения необработанных входных данных в пространство векоторов-признаков или тензоров с целью найти и извлечь полезные закономерности, которые помогут в предсказании целевых значений. Термину Representation Learning часто ставят в синонимы второй термин – \textit{Feature learning} – машинное обучение, направленное на выделение нужных признаков из данных
 
-\subsection{Headings: second level}
-\lipsum[5]
+На заре машинного обучения много усилий тратилось на разработку методов преобразования данных и предварительной обработки, а модель использовалась только для принятия поверхностных решений на основе извлеченных признаков. Одной из ключевых составляющих успеха глубокого обучения является способность изучать и извлекать с помощью глубоких слоев некоторые полезные признаки из данных. Увеличение объема доступных вычислений и размеченных наборов данных позволило перейти от использования средств извлечения признаков, разработанных вручную, к средствам извлечения посредством изучения данных. В результате фокус исследований также сместился с разработки признаков на разработку архитектуры. Исследования в области архитектуры глубокого обучения в последние годы резко возросли и вылились в несколько основных принципов и строительных блоков, например, свёрточный слой, рекуррентный слой и attention-слой.
+
+К сожалению, задача поиска хорошего представления может быть сложной. Согласно \citep{LeKhac2020}, существует несколько признаков, на которых строится representation learning: локальная гладкость, связность в пространстве и времени для последовательности наблюдений, наличие простых зависимостей между признаками. Одно из подходящих решений -- \textit{contrastive learning} -- подход при котором обучение происходит не только по принципу близости, но и по принципу различия. В отличие от дискриминативной модели, которая учится моделировать границу принятия решений среди классов, и генеративной модели, которая реконструирует входные выборки, при contrastive learning представление изучается путем сравнения входных выборок. Вместо того чтобы изучать сигнал по отдельным выборкам данных по одному элементу за раз, модель contrastive learning обучается путем сравнения различных выборок. Положим вектор $\textbf{x}$ некоторого объекта в качестве основного. Тогда вектор схожего объекта назовём $\textbf{x}^+$ -- позитивный элемент. Он должен быть как можно ближе к $\textbf{x}$. А вектор отличного объекта $\textbf{x}^-$ -- как можно дальше, как негативный элемент. Основной сложностью использования такого подхода является правильный подбор негативных примеров.
+
+Существует две меры различия элементов: \textit{triplet loss} \citep{Schroff2015} и его модификация для $N$ негативных примеров -- \textit{Multi-Class N-pair loss} \citep{Sohn2016ImprovedDM}, а также \textit{Information Noise-Contrastive Estimation} или \textit{InfoNCE} \citep{Oord2018RepresentationLW}.
+
+Triplet loss был впервые использован в задаче распознавания одного и того же человека в разных позах и под разным углом. Пусть есть элемент $\mathbf{x}$, называемый якорем. Выбирается один положительный элемент $\textbf{x}^+$ и один отрицательный $\textbf{x}^-$ с предположением, что $\textbf{x}^+$ принадлежит к тому же классу, что и $\mathbf{x}$, а $\mathbf{x}^-$ -- к другому. Затем расстояние между $\mathbf{x}$ и $\mathbf{x}^+$ уменьшается, а расстояние между $\mathbf{x}$ и $\mathbf{x}^-$ увеличивается:
+
 \begin{equation}
-	\xi _{ij}(t)=P(x_{t}=i,x_{t+1}=j|y,v,w;\theta)= {\frac {\alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}{\sum _{i=1}^{N} \sum _{j=1}^{N} \alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}}
+    \mathcal{L}_{triplet}(\textbf{x}, \textbf{x}^+, \{\textbf{x}_i^-\}) = \sum\limits_{x \in \chi}\max(0, ||f(\textbf{x} - f(\textbf{x}^+)||_2^2 - ||f(\textbf{x} - f(\textbf{x}^-)||_2^2 + \epsilon
 \end{equation}
 
-\subsubsection{Headings: third level}
-\lipsum[6]
+Обобщение triplet loss:
 
-\paragraph{Paragraph}
-\lipsum[7]
+\begin{equation}\label{eq:103}
+    \mathcal{L}_{N-pair}(\textbf{x}, \textbf{x}^+, \{\textbf{x}_i^-\}_{i=1}^{N-1}; f) = - \log \frac{\exp(f(\textbf{x})^T f(\textbf{x}_i^+))}{\exp(f(\textbf{x})^T f(\textbf{x}_i^+)) + \sum _{i=1}^{N-1} \exp(f(\textbf{x})^Tf(\textbf{x}_i^-))}
+\end{equation}
 
+Если брать только один негативный элемент из каждого класса, то получится softmax для мультиклассификации.
 
+NCE -- это изначально параметр оценки статистической модели. Идея заключалась в том, чтобы использовать логистическую регрессию, чтобы отделить данных от шума. Пусть $\mathbf{x}$ -- целевой элемент: $P(\mathbf{x} | C = 1; \theta) = p_{\theta}(\mathbf{x})$. Пусть $\tilde x: ~ P(\mathbf{\tilde x} | C = 0) = q(\mathbf{\tilde x})$ -- шумовой элемент. Логистическая регрессия моделирует логиты, поэтому моделируется логит выборки $u$ из целевого распределения данных на фоне распределения шума.
 
-\section{Examples of citations, figures, tables, references}
-\label{sec:others}
+\begin{equation}
+    l_{\theta}(\mathbf{u}) = \log \frac{p_{\theta}(\mathbf{u})}{q(\mathbf{u})} = \log p_{\theta}(\mathbf{u}) - \log q(\mathbf{u})
+\end{equation}
 
-\subsection{Citations}
-Citations use \verb+natbib+. The documentation may be found at
-\begin{center}
-	\url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
+Просле преобразования логитов в вероятности с помощью сигмоиды, можно применить кросс-энетропию:
 
-Here is an example usage of the two main commands (\verb+citet+ and \verb+citep+): Some people thought a thing \citep{kour2014real, hadash2018estimate} but other people thought something else \citep{kour2014fast}. Many people have speculated that if we knew exactly why \citet{kour2014fast} thought this\dots
+\begin{equation}
+    \mathcal{L}_{NCE} = - \frac{1}{N} \sum\limits_{i = 1}^N[\log \sigma(l_{\theta}(\mathbf{x}_i)) + \log (1 - \sigma(l_{\theta}(\mathbf{\tilde x}_i)))]
+\end{equation}
 
-\subsection{Figures}
-\lipsum[10]
-See Figure \ref{fig:fig1}. Here is how you add footnotes. \footnote{Sample of the first footnote.}
-\lipsum[11]
+\[\text{где } \sigma(l) = \frac{1}{1 + \exp(-l)} = \frac{p_{\theta}}{p_{\theta} + q}\]
 
-\begin{figure}
-	\centering
-	\includegraphics[width=0.5\textwidth]{../figures/log_reg_cs_exp.eps}
-	\caption{Sample figure caption.}
-	\label{fig:fig1}
-\end{figure}
+Методы contrastive learning хорошо себя показали в формировании визуальных представлений. Например, в \citep{chen2020simple} представлен фреймворк SimCLR, значительно превосходящий предыдущие self-supervised и semi-supervised методы. Его авторы разработали NT-Xent, в котором используется косинусное расстояние вместо скалярных произведений:
 
-\subsection{Tables}
-See awesome Table~\ref{tab:table}.
+\[\mathcal{L}_{SimCLR}^{(i, j)} = - \log\frac{\exp(\text{sim}(g(\mathbf{h}_i), g(\mathbf{h}_j) / \tau)}{\sum\limits_{i \neq k}^{2N}\exp(\text{sim}(g(\mathbf{h}_i), g(\mathbf{h}_k) / \tau)},\]
 
-The documentation for \verb+booktabs+ (`Publication quality tables in LaTeX') is available from:
-\begin{center}
-	\url{https://www.ctan.org/pkg/booktabs}
-\end{center}
+\noindent где $\mathbf{h}_i = f(\mathbf{x})$, то есть вместо пространства представлений в лосс входит его проекция.
 
+Во время обучения отсутствие истинных меток часто приводит к необходимости случайного выбора отрицательных экземпляров $\mathbf{x}^-$ из данных обучения. Однако такой подход приводит к смещению, если $\mathbf{x}^-$ на самом деле похож на $\mathbf{x}$. Это смещение приводит к значительному снижению производительности \citep{NEURIPS2021_de8aa43e}.
 
-\begin{table}
-	\caption{Sample table title}
-	\centering
-	\begin{tabular}{lll}
-		\toprule
-		\multicolumn{2}{c}{Part}                   \\
-		\cmidrule(r){1-2}
-		Name     & Description     & Size ($\mu$m) \\
-		\midrule
-		Dendrite & Input terminal  & $\sim$100     \\
-		Axon     & Output terminal & $\sim$10      \\
-		Soma     & Cell body       & up to $10^6$  \\
-		\bottomrule
-	\end{tabular}
-	\label{tab:table}
-\end{table}
+В \citep{chuang2020debiased} был предложен несмещённый контрастивный лосс. Учитывалось $N$ отрицательных и $M$ положительных элементов из выборки. $L^{N, M}_{\text{DebiasedNeg}}(f)$ - функция потерь, которая корректирует ложноотрицательные экземпляры. Чтобы избавиться от необходимости разметки, элементы берутся из распределения данных, а положительное распределение создаётся искусственно с помощью аугментаций, которые могут содержать ложноположительные выбросы.
 
-\subsection{Lists}
-\begin{itemize}
-	\item Lorem ipsum dolor sit amet
-	\item consectetur adipiscing elit.
-	\item Aliquam dignissim blandit est, in dictum tortor gravida eget. In ac rutrum magna.
-\end{itemize}
+Эта работа направлена на разработку нового алгоритма для несмещенного выбора положительных и отрицательных экземпляров выборки, который будет снижать вероятность получить как ложноположительные, так и ложноотрицательные элементы.
 
+\section{Постановка задачи}
 
-\bibliographystyle{unsrtnat}
-\bibliography{references}
+\subsection{Несмещённый лосс}
+
+Пусть $\mathcal{X}$ -- предметное пространство. Contrastive learning работает с семантически близкими парами точек $(\mathbf{x}, \mathbf{x}^+)$, где $\mathbf{x}$ берётся из распределения данных $p(x)$ над $\mathcal{X}$. Цель состоит в том, чтобы найти функцию эмбеддинга $f: \mathcal{X} \rightarrow \mathbb{R}^d$. В \citep{chuang2020debiased} предполагается, что существует множество дискретных скрытых классов $\mathcal{C}$ и положительные пары $(\mathbf{x}, \mathbf{x}^+)$ имеют один и тот же класс. Распределение по $\mathcal{C}$ обозначается $\rho(c)$, следовательно, совместное
+распределение $p_{x,c}(\textbf{x}, c) = p(\textbf{x}|c)\rho(c)$. Пусть $h : \mathcal{X} \rightarrow \mathcal{C}$ -- функция, присваивающая метки классов. Тогда $p^+_x(\textbf{x}') = p(\textbf{x}'|h(\textbf{x}') = h(\textbf{x}))$ -- вероятность сказать, что $\textbf{x}'$ -- положительная пара для $\textbf{x}$, и $p^-_x(\textbf{x}') = p(\textbf{x}'|h(\textbf{x}') \neq h(\textbf{x}))$ -- для отрицательной пары. Предполагается, что вероятности классов $\rho(\textbf{x}) = \tau^+$ однородны и $\tau^- = 1 - \tau^+$ -- ворятность обнаружить любой другой класс. Тогда «идеальный» лосс при условии наличия $N$ негативных элементов выглядеть так:
+
+\begin{equation}\label{eq:101}
+L_{\text{Unbiased}}^N(f) = \mathbb{E}_{\substack{\textbf{x} \sim p, \textbf{x}^+ \sim p^+_x,\\ \textbf{x}_i^- \sim p_x^-}} \bigg[-\log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \frac{Q}{N}\sum _{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}}\bigg]
+\end{equation}
+
+В знаменателе авторы \citep{chuang2020debiased} поставили множитель $\frac{Q}{N}$ для взвешивания и дальнейшего анализа. При первой оценке и конечном $N$ берётся $Q = N$. Тогда:
+
+\begin{equation}\label{eq:1}
+L_{\text{Unbiased}}^N(f) = \mathbb{E}_{\substack{\textbf{x} \sim p, \textbf{x}^+ \sim p^+_x,\\ \textbf{x}_i^- \sim p_x^-}} \bigg[-\log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \sum _{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}}\bigg]
+\end{equation}
+
+На практике $p_x^-(\textbf{x}_i^-)$ неизвестно, поэтому $\textbf{x}_i^-$ выбирается из немаркированного распределения $p(\textbf{x})$. С вероятностью $\tau^+$ попадётся ложноотрицательный элемент. Лосс для такого случая уже будет смещённым.
+
+\begin{equation}\label{eq:2}
+L_{\text{Biased}}^N(f) = \mathbb{E}_{\substack{\textbf{x} \sim p, \textbf{x}^+ \sim p^+_x,\\ \textbf{x}_i^- \sim p_x}} \bigg[-\log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \sum _{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}}\bigg]
+\end{equation}
+
+В \citep{chuang2020debiased} доказывается лемма о том, что в пределе $L_{\text{Biased}}^N(f)$ -- верхняя грань $L_{\text{Unbiased}}^N(f)$.
+
+Задачей является поиск наиболее близкой к $L_{\text{Unbiased}}^N(f)$ функции потерь при условии наличия $M$ положительных элементов и распределения $p(\mathbf{x})$. Его разложение:
+
+\begin{equation}\label{eq:3}
+p(\textbf{x}') = \tau^+ p^+_x(\textbf{x}') + \tau^-p_x^-(\textbf{x}')
+\end{equation}
+
+Выразим $p^-_x(\textbf{x}')$:
+
+\begin{equation} \label{eq:4}
+p_x^-(\textbf{x}') = \frac{p(\textbf{x}') - \tau^+ p^+_x(\textbf{x}')}{\tau^-}
+\end{equation}
+
+Подсчёт $p^-_x(\textbf{x}')$ через $p(\mathbf{x})$ и $p^-_x(\textbf{x}')$ в итоговой формуле возможен, но очень дорогостоящий. Поэтому предлагается в \citep{chuang2020debiased} использовать приближение итоговой функции потерь и использовать уже упомянутый выше $L_{\text{DebiasedNeg}}^{N, M}(f)$:
+
+\begin{equation}\label{eq:5}
+L_{\text{DebiasedNeg}}^{N, M}(f) = \mathbb{E}_{\substack{\textbf{x} \sim p; \textbf{x}_+ \sim p_x^+,\\ \{\textbf{u}_i\}_{i=1}^N \sim p^N \\ \{\textbf{v}_j\}_{j=1}^M \sim {p_x^+}^M}}  \bigg[ -\log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)} }{e^{f(\textbf{x})^T f(\textbf{x}^+)} + N g\big(\textbf{x}, \{\textbf{u}_i\}_{i=1}^N, \{\textbf{v}_j\}_{j=1}^M\big)} \bigg],
+\end{equation}
+
+\noindent где эмпирическая оценка $p(\mathbf{x}^-)$:
+
+\begin{equation}\label{eq:6}
+g\big(\textbf{x}, \{\textbf{u}_i\}_{i=1}^N, \{\textbf{v}_j\}_{j=1}^M\big) = \max \bigg\{ \frac{1}{\tau^-}\bigg(\frac{1}{N} \sum \limits_{i=1}^N e^{f(\textbf{x})^T f(\textbf{u}_i)} - \tau^+ \frac{1}{M} \sum \limits_{j=1}^M e^{f(\textbf{x})^T f(\textbf{v}_j)}\bigg), e^{-1/t}\bigg\}.
+\end{equation}
+
+$\{\textbf{u}_i\}_{i=1}^N$ -- $N$ сэмплов из $p(\mathbf{x'})$ и $\{\textbf{v}_j\}_{j=1}^M$ -- $M$ сэмплов из $p(\mathbf{x'}^+)$, $t$ -- параметр температуры.
+
+В \citep{chuang2020debiased} также приводится оценка скорости сходимости $L_{\text{DebiasedNeg}}^{N, M}(f)$ к случаю бесконечного $N$ и $M = 1$:
+
+\begin{equation}\label{eq:102}
+|\tilde{L}_{\text{DebiasedNeg}}^N(f) - L_{\text{DebiasedNeg}}^{N, M}(f)| \leq \frac{e^{3/2}}{\tau^-}\sqrt{\frac{\pi}{2N}} + \frac{e^{3/2}\tau^+}{\tau^-}\sqrt{\frac{\pi}{2M}}
+\end{equation}
+
+Применение данной лосс-функции в SimCLR позволило увеличить точность результата и уменьшить число ложноотрицательных элементов. Поэтому основная задача данной работы -- разработка алгоритма, направленного на уменьшение числа ложноположительных сэмплов.
+
+\subsection{Ложноположительные элементы}
+
+Чрезмерная аугментация в попытке получить как можно большее $M$ приводит к появлению ложноположительных сэмплов и смещению оценки. Оценим распределение положительных элементов в рамках функции потерь.
+
+\begin{equation}\label{eq:7}
+p_x^+ (\textbf{x}') = \frac{p(\textbf{x}') - \tau^- p^-_x(\textbf{x}')}{\tau^+}
+\end{equation}
+
+В отличие от пункта выше здесь положительная выборка из $p(\mathbf{x'})$ может включать в себя на самом деле отрицательные сэмплы.
+
+\newtheorem{theorem}{Теорема}
+\newtheorem{lemma}[theorem]{Лемма}
+
+\begin{lemma}
+% \normalfont 
+При $N \to \infty$:
+\begin{equation} \label{eq:8}
+\mathbb{E}_{\substack{\textbf{x} \sim p \\ \textbf{x}^+ \sim p_x^+ \\ \{\textbf{x}_i^-\}_{i=1}^N \sim {p_x^-}^N}} \bigg[ - \log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \sum_{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}} \bigg] \longrightarrow
+\mathbb{E}_{\substack{\textbf{x} \sim p \\ \textbf{x}^- \sim p_x^-}} \bigg[ - \log \frac{R}{R + N \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}^-)}} \bigg],
+\end{equation}
+
+\noindent где
+\begin{equation}  \label{eq:9}
+R = \frac{1}{\tau^+} \big(\mathbb{E}_{\textbf{x}' \sim p} e^{f(\textbf{x})^T f(\textbf{x}')} - \tau^- \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}^-)}\big).
+\end{equation}
+\end{lemma}
+
+\renewcommand\qedsymbol{$\blacksquare$}
+\begin{proof}
+Поскольку выражение внутри математического ожидания ограничено, мы можем применить теорему Лебега о мажорируемой сходимости:
+
+\begin{flalign*}
+&\lim_{N \to \infty} \mathbb{E} \bigg[ - \log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \sum_{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}} \bigg] = \mathbb{E} \bigg[ \lim_{N \to \infty} - \log \frac{e^{f(\textbf{x})^T f(\textbf{x}^+)}}{e^{f(\textbf{x})^T f(\textbf{x}^+)} + \sum_{i=1}^N e^{f(\textbf{x})^T f(\textbf{x}_i^-)}} \bigg] = &\\
+& = \mathbb{E} \bigg[ - \log \frac{\mathbb{E}_{\textbf{x}^+ \sim p_x^+} e^{f(\textbf{x})^T f(\textbf{x}^+)}}{\mathbb{E}_{\textbf{x}^+ \sim p_x^+} e^{f(\textbf{x})^T f(\textbf{x}^+)} + N \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}^-)}}\bigg]
+\end{flalign*}
+
+Используя \ref{eq:7} и линейность матожидания, получим:
+
+$$\mathbb{E}_{\textbf{x}^+ \sim p_x^+} e^{f(\textbf{x})^T f(\textbf{x}^+)} = \frac{1}{\tau^+} \big(\mathbb{E}_{\textbf{x}' \sim p} e^{f(\textbf{x})^T f(\textbf{x}')} - \tau^- \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}^-)}\big) = R.$$
+\end{proof}
+
+Назовём предел в лемме $\tilde{L}_{\text{DebiasedPos}}^N (f)$:
+
+\begin{equation} \label{eq:10}
+\tilde{L}_{\text{DebiasedPos}}^N (f) = \mathbb{E}_{\substack{\textbf{x} \sim p \\ \textbf{x}^- \sim p_x^-}} \bigg[ - \log \frac{\mathbb{E}_{\textbf{x}' \sim p} e^{f(\textbf{x})^T f(\textbf{x}')} - \tau^- \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}_i^-)}}{\mathbb{E}_{\textbf{x}' \sim p} e^{f(\textbf{x})^T f(\textbf{x}')} + \big(N \tau^+ - \tau^-\big) \mathbb{E}_{\textbf{x}^- \sim p_x^-} e^{f(\textbf{x})^T f(\textbf{x}_i^-)}}\bigg]
+\end{equation}
+
+Полученная функция потерь при конечном $N$:
+
+\begin{equation}\label{eq:11}
+L_{\text{DebiasedPos}}^N (f) = \mathbb{E}_{\substack{\textbf{x} \sim p \\ \{\textbf{u}_i\}_{i=1}^N \sim {p_x^-}^N \\ \textbf{v} \sim p_x^+}} \bigg[-\log \frac{P_{\text{emp}} (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N, \textbf{v}) - \tau^- P_{\text{emp}}^- (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N)} {P_{\text{emp}} (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N, \textbf{v})+ \big(N \tau^+ - \tau^-\big) P_{\text{emp}}^- (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N) }\bigg],
+\end{equation}
+
+\noindent где
+\begin{equation} \label{eq:12}
+P_{\text{emp}} (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N, \textbf{v}) = \frac{1}{N+2} \bigg(\sum \limits_{i=1}^N e^{f(\textbf{x})^T f(\textbf{u}_i)} + e^{f(\textbf{x})^T f(\textbf{v})} + e^{f(\textbf{x})^T f(\textbf{x})}\bigg);
+\end{equation}
+
+\begin{equation} \label{eq:13}
+P_{\text{emp}}^- (\textbf{x}, \{\textbf{u}_i\}_{i=1}^N) = \frac{1}{N} \sum \limits_{i=1}^N e^{f(\textbf{x})^T f(\textbf{u}_i)}.
+\end{equation}
+
+Теперь при конечном $N$ и $M = 1$ можно доказать следующую теорему:
+
+\begin{theorem}
+\label{thm:asympt}
+Если $M = 1$, то для любого эмбеддинга f и любой $\delta > 0$ существует $N$ такое, что:
+
+\begin{equation} \label{eq:14}
+\big|\tilde{L}_{\text{DebiasedPos}}^N(f) - L_{\text{DebiasedPos}}^N(f)\big| \leq \bigg[\bigg(1 + \frac{\tau^-}{\tau^+} + \delta\bigg) \sqrt{\frac{\pi}{2N}} + \bigg(1 + \frac{1}{\tau^+}\bigg) \sqrt{\frac{\pi}{2N + 2}}\bigg] e^{3/2},
+\end{equation}
+
+\noindent то есть разница между случаем, когда $N$ конечно и когда бесконечно, убывает как $\sqrt{N}$.
+\end{theorem}
+
+\section{Вычислительный эксперимент}
+
+В качестве вычислительного эксперимента проводится сравнение $\mathcal{L}_{N-pair}$ (\ref{eq:103}) и $\mathcal{L}_{\text{DebiasedPos}}^N(f)$ (\ref{eq:11}). В качестве датасета используется CIFAR10 \citep{krizhevsky2009learning}, состоящий из 60000 цветных изображений размером 32x32 для классификации. Бейзлайн-модель: SimCLR \citep{chuang2020debiased} с энкодером ResNet18 \citep{he2015deep}, оптимайзер -- Adam \citep{kingma2017adam}, learning rate 0.001, размер батча 512. Все модели тренируются 50 эпох и оцениваются линейным классификатором после получения эмбеддинга.
+
+\subsection{Анализ ошибки}
+
+\section{Заключение}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
 
 \end{document}
