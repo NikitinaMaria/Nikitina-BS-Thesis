@@ -1,4 +1,0 @@
-numpy==1.21.5
-scipy==1.4.1
-typing==3.10.0
-torch==2.1.2
