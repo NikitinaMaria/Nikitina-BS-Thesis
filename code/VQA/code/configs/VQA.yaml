@@ -1,0 +1,30 @@
+train_file: ['drive/MyDrive/data/vqa_train_1.json']
+             
+test_file: ['drive/MyDrive/data/vqa_val_2.json']
+answer_list: 'drive/MyDrive/data/answer_list.json'
+
+vqa_root: '/export/home/.cache/lavis/coco/images/' #train2014/
+# vg_root: '../data/VG/VG_100K/'  #image/
+
+image_res: 200
+batch_size_train: 32 
+batch_size_test: 16 
+k_test: 128
+
+alpha: 0.4
+distill: True
+warm_up: True
+
+eos: '[SEP]'
+
+bert_config: '/content/drive/MyDrive/code/configs/config_bert.json'
+
+optimizer: {opt: adamW, lr: 2e-5, weight_decay: 0.02}
+schedular: {sched: cosine, lr: 2e-5, epochs: 1, min_lr: 1e-6, decay_rate: 1, warmup_lr: 1e-5, warmup_epochs: 4, cooldown_epochs: 0}
+
+
+
+
+
+
+
